@@ -1,0 +1,40 @@
+getRoutePathV1:
+  handler: src/routing/V1/getRoutePath/endpoint.handler
+  memorySize: 2048
+  iamRoleStatementsInherit: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action: geo:CalculateRoute
+      Resource: '*'
+  events:
+    - httpApi:
+        method: get
+        path: /v1/routing/path
+        authorizer:
+          type: aws_iam
+
+generateRouteV1:
+  handler: src/routing/V1/generateRoute/endpoint.handler
+  memorySize: 2048
+  iamRoleStatementsInherit: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action: geo:CalculateRoute
+      Resource: '*'
+    - Effect: Allow
+      Action: secretsmanager:GetSecretValue
+      Resource:
+        Fn::ImportValue: calo-${self:provider.stage}-ApiKeySecretRef
+    - Effect: Allow
+      Action: sns:Publish
+      Resource:
+        Ref: GoogleETATopic
+  environment:
+    GOOGLE_ETA_TOPIC_ARN:
+      Ref: GoogleETATopic
+  events:
+    - httpApi:
+        method: post
+        path: /v1/routing/generate-route
+        authorizer:
+          type: aws_iam

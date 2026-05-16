@@ -1,0 +1,21 @@
+prod:
+  origins:
+    - https://dashboard.calo.app
+  headers:
+    - Content-Type
+    - X-Amz-Date
+    - Authorization
+    - X-Api-Key
+    - X-Amz-Security-Token
+  allowCredentials: false
+dev:
+  origins:
+    - http://localhost:3000
+    - https://dashboard.dev.calo.app
+  headers:
+    - Content-Type
+    - X-Amz-Date
+    - Authorization
+    - X-Api-Key
+    - X-Amz-Security-Token
+  allowCredentials: false

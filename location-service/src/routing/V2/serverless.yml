@@ -1,0 +1,24 @@
+generateRouteV2:
+  handler: src/routing/V2/generateRoute/endpoint.handler
+  memorySize: 2048
+  iamRoleStatementsInherit: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action: secretsmanager:GetSecretValue
+      Resource:
+        Fn::ImportValue: calo-${self:provider.stage}-ApiKeySecretRef
+    - Effect: Allow
+      Action:
+        - s3:PutObject
+      Resource:
+        - Fn::Join:
+            - ''
+            - - 'arn:aws:s3:::'
+              - Fn::ImportValue: calo-${self:provider.stage}-S3Name
+              - '/route-plans/*'
+  events:
+    - sqs:
+        arn:
+          Fn::ImportValue: calo-dashboard-driver-api-${self:provider.stage}-TimeWindowRouteSQSArn
+  environment:
+    BUCKET_NAME: ${self:custom.BUCKET_NAME}

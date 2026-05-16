@@ -1,0 +1,34 @@
+Resources:
+  TimeWindowRouteSQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: calo-dashboard-routing-${self:provider.stage}-time-window-route
+      VisibilityTimeout: 300
+      RedrivePolicy:
+        maxReceiveCount: 1
+        deadLetterTargetArn:
+          Fn::GetAtt:
+            - TimeWindowRouteSQSDLQ
+            - Arn
+
+  TimeWindowRouteSQSDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: calo-dashboard-routing-${self:provider.stage}-time-window-route-dlq
+
+  DynamicRoutingSQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: calo-dashboard-routing-${self:provider.stage}-dynamic-routing
+      VisibilityTimeout: 900
+      RedrivePolicy:
+        maxReceiveCount: 1
+        deadLetterTargetArn:
+          Fn::GetAtt:
+            - DynamicRoutingSQSDLQ
+            - Arn
+
+  DynamicRoutingSQSDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: calo-dashboard-routing-${self:provider.stage}-dynamic-routing-dlq

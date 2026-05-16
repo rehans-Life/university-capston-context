@@ -1,0 +1,8 @@
+Outputs:
+  GenerateTimeWindowRouteLambdaArn:
+    Value:
+      Fn::GetAtt:
+        - GenerateTimeWindowRouteLambdaFunction
+        - Arn
+    Export:
+      Name: calo-dashboard-driver-api-${self:provider.stage}-GenerateTimeWindowRouteLambdaArn

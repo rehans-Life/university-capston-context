@@ -1,0 +1,30 @@
+{
+  "name": "@calo-dashboard-api/routing",
+  "version": "1.0.0",
+  "private": true,
+  "sideEffects": false,
+  "scripts": {
+    "start": "NODE_ENV=offline sls offline start --noAuth --param libsLayer=1",
+    "test": "jest --coverage",
+    "lint:fix": "eslint --fix . --ext .ts --ext .js",
+    "lint": "eslint . --ext .ts --ext .js",
+    "compile": "tsc --noEmit",
+    "prettier": "npx prettier \"**/*.{js,ts}\" --write --list-different",
+    "env": "npx cross-env STAGE=${STAGE:=dev} sls export-env -s $STAGE --all"
+  },
+  "dependencies": {
+    "@calo-dashboard-api/libs": "*"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=20",
+    "npm": ">=10"
+  },
+  "engineStrict": true,
+  "lint-staged": {
+    "*.{js,ts}": [
+      "prettier --write --list-different",
+      "eslint --fix"
+    ]
+  }
+}

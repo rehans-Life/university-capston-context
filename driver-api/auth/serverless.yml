@@ -1,0 +1,21 @@
+verifyChallenge:
+  handler: src/auth/verifyChallenge/trigger.handler
+
+createChallenge:
+  handler: src/auth/createChallenge/trigger.handler
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - sns:Publish
+      Resource:
+        - Fn::ImportValue: calo-sns-${calo:stage}-SendSMSTopicArn
+        - Fn::ImportValue: calo-sns-${calo:stage}-SendSlackTopicArn
+  environment:
+    USER_TYPE: driver
+    SMS_TOPIC_ARN:
+      Fn::ImportValue: calo-sns-${calo:stage}-SendSMSTopicArn
+    SLACK_TOPIC_ARN:
+      Fn::ImportValue: calo-sns-${calo:stage}-SendSlackTopicArn
+
+defineChallenge:
+  handler: src/auth/defineChallenge.handler

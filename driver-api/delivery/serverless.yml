@@ -1,0 +1,169 @@
+getDeliveries:
+  handler: src/delivery/getList/endpoint.handler
+  iamRoleStatementsInherit: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:BatchGetItem
+      Resource:
+        - Fn::ImportValue: calo-${calo:stage}-SingleDataTableArn
+  events:
+    - http:
+        method: get
+        path: /deliveries
+        cors: ${file(templates/cors.yml):${calo:stage}}
+        authorizer:
+          authorizerId:
+            Ref: Authorizer
+          type: COGNITO_USER_POOLS
+
+getDelivery:
+  handler: src/delivery/get/endpoint.handler
+  iamRoleStatementsInherit: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:BatchGetItem
+      Resource:
+        - Fn::ImportValue: calo-${calo:stage}-SingleDataTableArn
+  events:
+    - http:
+        method: get
+        path: /deliveries/{id}
+        cors: ${file(templates/cors.yml):${calo:stage}}
+        authorizer:
+          authorizerId:
+            Ref: Authorizer
+          type: COGNITO_USER_POOLS
+
+updateDelivery:
+  handler: src/delivery/updateDelivery/endpoint.handler
+  iamRoleStatementsInherit: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+      Resource:
+        Fn::GetAtt:
+          - HandleDeliveredStatusQueue
+          - Arn
+    - Effect: Allow
+      Action:
+        - sns:Publish
+      Resource:
+        - Fn::ImportValue: calo-sns-${calo:stage}-SendIntercomTopicArn
+        - Fn::ImportValue: calo-sns-${calo:stage}-SendPushNotificationTopicArn
+  environment:
+    HANDLE_DELIVERD_STATUS_QUEUE_URL:
+      Ref: HandleDeliveredStatusQueue
+    LOCATION_SERVICE_URL:
+      Fn::ImportValue: sls-calo-location-api-${calo:stage}-HttpApiUrl
+    SEND_INTERCOM_ARN:
+      Fn::ImportValue: calo-sns-${calo:stage}-SendIntercomTopicArn
+    SEND_PUSH_NOTIFICATION_ARN:
+      Fn::ImportValue: calo-sns-${calo:stage}-SendPushNotificationTopicArn
+  events:
+    - http:
+        method: put
+        path: /deliveries/{id}
+        cors: ${file(templates/cors.yml):${calo:stage}}
+        authorizer:
+          authorizerId:
+            Ref: Authorizer
+          type: COGNITO_USER_POOLS
+
+handleDeliveredStatusListener:
+  handler: src/delivery/updateDelivery/handleDeliveredDelivery/endpoint.handler
+  iamRoleStatementsInherit: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action: events:PutEvents
+      Resource:
+        Fn::ImportValue: event-bus-${calo:stage}-arn
+  environment:
+    EVENT_BUS_NAME:
+      Fn::ImportValue: event-bus-${calo:stage}-name
+  events:
+    - sqs:
+        arn:
+          Fn::GetAtt:
+            - HandleDeliveredStatusQueue
+            - Arn
+
+handleActions:
+  handler: src/delivery/handleActions/endpoint.handler
+  iamRoleStatementsInherit: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - sns:Publish
+      Resource:
+        - Fn::ImportValue: calo-sns-${calo:stage}-SendSMSTopicArn
+        - Fn::ImportValue: calo-sns-${calo:stage}-SendSlackTopicArn
+    - Effect: Allow
+      Action: events:PutEvents
+      Resource:
+        Fn::ImportValue: event-bus-${calo:stage}-arn
+  environment:
+    SLACK_TOPIC_ARN:
+      Fn::ImportValue: calo-sns-${calo:stage}-SendSlackTopicArn
+    SMS_TOPIC_ARN:
+      Fn::ImportValue: calo-sns-${calo:stage}-SendSMSTopicArn
+    EVENT_BUS_NAME:
+      Fn::ImportValue: event-bus-${calo:stage}-name
+  events:
+    - http:
+        method: post
+        path: /deliveries/{id}/handle-actions
+        cors: ${file(templates/cors.yml):${calo:stage}}
+        authorizer:
+          authorizerId:
+            Ref: Authorizer
+          type: COGNITO_USER_POOLS
+
+noCustomerAtDeliverySpot:
+  handler: src/delivery/noCustomerAtDeliverySpot/endpoint.handler
+  iamRoleStatementsInherit: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - sns:Publish
+      Resource:
+        - Fn::ImportValue: calo-sns-${calo:stage}-SendSMSTopicArn
+        - Fn::ImportValue: calo-sns-${calo:stage}-SendSlackTopicArn
+  environment:
+    SLACK_TOPIC_ARN:
+      Fn::ImportValue: calo-sns-${calo:stage}-SendSlackTopicArn
+    SMS_TOPIC_ARN:
+      Fn::ImportValue: calo-sns-${calo:stage}-SendSMSTopicArn
+  events:
+    - http:
+        method: post
+        path: /deliveries/{id}/no-customer-found
+        cors: ${file(templates/cors.yml):${calo:stage}}
+        authorizer:
+          authorizerId:
+            Ref: Authorizer
+          type: COGNITO_USER_POOLS
+
+unableToDeliver:
+  handler: src/delivery/unableToDeliver/endpoint.handler
+  iamRoleStatementsInherit: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - sns:Publish
+      Resource:
+        - Fn::ImportValue: calo-sns-${calo:stage}-SendSlackTopicArn
+  environment:
+    SLACK_TOPIC_ARN:
+      Fn::ImportValue: calo-sns-${calo:stage}-SendSlackTopicArn
+  events:
+    - http:
+        method: post
+        path: /deliveries/{id}/unable-to-deliver
+        cors: ${file(templates/cors.yml):${calo:stage}}
+        authorizer:
+          authorizerId:
+            Ref: Authorizer
+          type: COGNITO_USER_POOLS

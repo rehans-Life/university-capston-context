@@ -1,0 +1,215 @@
+getDriverMetrics:
+  handler: src/driverMetrics/get/endpoint.handler
+  iamRoleStatementsInherit: true
+  events:
+    - http:
+        method: get
+        path: /driver-metrics/time/{time}
+        cors: ${file(templates/cors.yml):${calo:stage}}
+        authorizer:
+          authorizerId: 
+            Ref: Authorizer
+          type: COGNITO_USER_POOLS
+
+updateDriverMetrics:
+  handler: src/driverMetrics/update/endpoint.handler
+  iamRoleStatementsInherit: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:BatchGetItem
+      Resource:
+        - Fn::ImportValue: calo-${calo:stage}-SingleDataTableArn
+    - Effect: Allow
+      Action: 
+        - execute-api:Invoke
+      Resource: 
+        - Fn::Join:
+            - ""
+            - - "arn:aws:execute-api:"
+              - Ref: AWS::Region
+              - ":"
+              - Ref: AWS::AccountId
+              - ":"
+              - Fn::ImportValue: sls-calo-location-api-${calo:stage}-HttpApiId
+              - "/*/POST/v1/routing/calculate-route"
+        - Fn::Join:
+          - ""
+          - - "arn:aws:execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Fn::ImportValue: sls-calo-location-api-${calo:stage}-HttpApiId
+            - "/*/POST/v1/routing/generate-route"
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+      Resource:
+        Fn::GetAtt:
+          - SyncETAQueue
+          - Arn
+    - Effect: Allow
+      Action:
+        - sns:Publish
+      Resource:
+        - Ref: GenerateRouteTopic
+  environment:
+    SYNC_ETA_QUEUE_URL:
+      Ref: SyncETAQueue
+    LOCATION_SERVICE_URL:
+      Fn::ImportValue: sls-calo-location-api-${calo:stage}-HttpApiUrl
+    GENERATE_ROUTE_TOPIC_ARN: 
+      Ref: GenerateRouteTopic
+  events:
+    - http:
+        method: put
+        path: /driver-metrics/{id}
+        cors: ${file(templates/cors.yml):${calo:stage}}
+        authorizer:
+          authorizerId: 
+            Ref: Authorizer
+          type: COGNITO_USER_POOLS
+ 
+versionCheck:
+  handler: src/driverMetrics/versionCheck/endpoint.handler
+  iamRoleStatementsInherit: true
+  events:
+    - http:
+        method: get
+        path: /driver-metrics/version/{version}
+        cors: ${file(templates/cors.yml):${calo:stage}}
+        authorizer:
+          authorizerId: 
+            Ref: Authorizer
+          type: COGNITO_USER_POOLS
+
+syncETAListener:
+  handler: src/driverMetrics/ETA/syncETA/endpoint.handler
+  iamRoleStatementsInherit: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:BatchGetItem
+      Resource:
+        - Fn::ImportValue: calo-${calo:stage}-SingleDataTableArn
+  events:
+    - sqs:
+        arn:
+          Fn::GetAtt:
+            - SyncETAQueue
+            - Arn
+
+generateRouteListener:
+  handler: src/driverMetrics/ETA/generateRouteListener/listener.handler
+  memorySize: 2048
+  timeout: 240
+  iamRoleStatementsInherit: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - sns:Publish
+      Resource:
+        Fn::ImportValue: calo-sns-${calo:stage}-SendEmailTopicArn
+    - Effect: Allow
+      Action:
+        - s3:GetObject
+        - s3:PutObject
+      Resource:
+        - Fn::Join:
+            - ""
+            - - "arn:aws:s3:::"
+              - Fn::ImportValue: calo-${calo:stage}-S3Name
+              - "/exports/*"
+    - Effect: Allow
+      Action: secretsmanager:GetSecretValue
+      Resource: 
+        Fn::ImportValue: calo-${calo:stage}-ApiKeySecretRef
+    - Effect: Allow
+      Action: 
+        - execute-api:Invoke
+      Resource: 
+        - Fn::Join:
+            - ""
+            - - "arn:aws:execute-api:"
+              - Ref: AWS::Region
+              - ":"
+              - Ref: AWS::AccountId
+              - ":"
+              - Fn::ImportValue: sls-calo-location-api-${calo:stage}-HttpApiId
+              - "/*/POST/v1/routing/generate-route"
+  environment:
+    BUCKET_NAME: ${self:custom.BUCKET_NAME}
+    EMAIL_TOPIC_ARN:
+      Fn::ImportValue: calo-sns-${calo:stage}-SendEmailTopicArn
+    LOCATION_SERVICE_URL:
+      Fn::ImportValue: sls-calo-location-api-${calo:stage}-HttpApiUrl
+  events:
+    - sns:
+        arn:
+          Ref: GenerateRouteTopic
+        topicName: GenerateRouteTopic
+
+triggerETARecalculation:
+  handler: src/driverMetrics/ETA/cron/triggerETARecalculation.handler
+  timeout: 900
+  iamRoleStatementsInherit: true
+  events:
+    - schedule:
+        rate: rate(15 minutes)
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+      Resource:
+        Fn::GetAtt:
+          - RecalculateETAQueue
+          - Arn
+  environment:
+    RECALCULATE_ETA_QUEUE_URL:
+      Ref: RecalculateETAQueue
+
+recalculateETA:
+  handler: src/driverMetrics/ETA/recalculateETA/endpoint.handler
+  iamRoleStatementsInherit: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:BatchGetItem
+      Resource:
+        - Fn::ImportValue: calo-${calo:stage}-SingleDataTableArn
+    - Effect: Allow
+      Action: 
+        - execute-api:Invoke
+      Resource: 
+        - Fn::Join:
+          - ""
+          - - "arn:aws:execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Fn::ImportValue: sls-calo-location-api-${calo:stage}-HttpApiId
+            - "/*/POST/v1/routing/generate-route"
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+      Resource:
+        Fn::GetAtt:
+          - SyncETAQueue
+          - Arn
+  events:
+    - sqs:
+        arn:
+          Fn::GetAtt:
+            - RecalculateETAQueue
+            - Arn
+        functionResponseType: ReportBatchItemFailures
+        batchSize: 2
+        maximumConcurrency: 2
+  environment:
+    SYNC_ETA_QUEUE_URL:
+      Ref: SyncETAQueue
+    LOCATION_SERVICE_URL:
+      Fn::ImportValue: sls-calo-location-api-${calo:stage}-HttpApiUrl
+          

@@ -1,0 +1,21 @@
+createDynamicRouting:
+  handler: src/cron/createDynamicRouting.handler
+  timeout: 300
+  iamRoleStatementsInherit: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action: secretsmanager:GetSecretValue
+      Resource:
+        Fn::ImportValue: calo-${self:provider.stage}-ApiKeySecretRef
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+      Resource:
+        Fn::GetAtt:
+          - DynamicRoutingSQS
+          - Arn
+  environment:
+    DYNAMIC_ROUTING_QUEUE_URL:
+      Ref: DynamicRoutingSQS
+  events:
+    - schedule: cron(0 * * * ? *)  # Every hour at minute 0

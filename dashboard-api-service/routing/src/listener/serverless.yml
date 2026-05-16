@@ -1,0 +1,57 @@
+dynamicRoutingListener:
+  handler: src/listener/DynamicRoutingListener.handler
+  timeout: 900
+  iamRoleStatementsInherit: true
+  iamRoleStatementsName: ${self:service}-${self:provider.stage}-dynRouteLstnr
+  iamRoleStatements:
+    - Effect: Allow
+      Action: secretsmanager:GetSecretValue
+      Resource:
+        Fn::ImportValue: calo-${self:provider.stage}-ApiKeySecretRef
+    - Effect: Allow
+      Action:
+        - sqs:ReceiveMessage
+        - sqs:DeleteMessage
+        - sqs:GetQueueAttributes
+      Resource:
+        Fn::GetAtt:
+          - DynamicRoutingSQS
+          - Arn
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+      Resource:
+        Fn::ImportValue: calo-dashboard-driver-api-${self:provider.stage}-TimeWindowRouteSQSArn
+    - Effect: Allow
+      Action:
+        - s3:PutObject
+        - s3:GetObject
+      Resource:
+        - Fn::Join:
+            - ''
+            - - 'arn:aws:s3:::'
+              - Fn::ImportValue: calo-${self:provider.stage}-S3Name
+              - '/route-plans/*'
+    - Effect: Allow
+      Action:
+        - sns:Publish
+      Resource:
+        Fn::ImportValue: calo-sns-${self:provider.stage}-SendEmailTopicArn
+  environment:
+    EMAIL_TOPIC_ARN:
+      Fn::ImportValue: calo-sns-${self:provider.stage}-SendEmailTopicArn
+    TIME_WINDOW_QUEUE_URL:
+      Fn::Sub:
+        - 'https://sqs.${Region}.amazonaws.com/${AccountId}/${QueueName}'
+        - Region:
+            Ref: AWS::Region
+          AccountId:
+            Ref: AWS::AccountId
+          QueueName: calo-dashboard-driver-${self:provider.stage}-time-window-route
+  events:
+    - sqs:
+        arn:
+          Fn::GetAtt:
+            - DynamicRoutingSQS
+            - Arn
+        batchSize: 1

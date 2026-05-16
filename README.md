@@ -24,7 +24,12 @@ Backend for the driver app
 
 ### Driver APP
 
-Mobile App for drivers
+#### Mobile App for drivers
+
+#### Views
+
+1. Deliveries: Drivers can form there own route by selecting deliveries on the map
+2. DeliveriesV2: Drivers will be shown the automated routes approved by the admin on the dashboard app
 
 ### libs
 

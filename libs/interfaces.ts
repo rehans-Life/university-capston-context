@@ -81,8 +81,6 @@ export interface RoutePoint {
   bufferTime?: number;
 }
 
-export type RoutePointWithEta = RoutePoint & { eta: string };
-
 export interface GetRoutingReq {
   curPosLng: number;
   curPosLat: number;
@@ -246,3 +244,208 @@ export interface ESRoutePlan {
       type: ShiftActionType.FINISHED_SHIFT;
       time: string;
     };
+
+    export type DriverApiEvent = APIGatewayProxyEvent & { driverId?: string };
+
+    export interface BaseSlackMapping {
+      driverName: string;
+      driverPhoneNumber: string;
+      customerName: string;
+      customerPhoneNumber: string;
+    }
+    export interface NoCustomerSlackMapping extends BaseSlackMapping {
+      customerAddress: string;
+    }
+    
+    export interface MapMarkerUpdateMapping extends BaseSlackMapping {
+      oldPosition: LatLng;
+      newPosition: LatLng;
+    }
+    
+    export interface AddDriverNoteMapping extends NoCustomerSlackMapping {
+      note: string;
+    }
+    
+    export interface DeliveryAdditionalData {
+      pendingAmount: number;
+      currency: Currency;
+      driverNote: string;
+      driverImages?: string[];
+      priority?: number;
+      eta?: Range;
+      groupBufferTime?: number;
+      unreturnedCoolerBags?: number;
+    }
+    
+    export interface RoutePoint {
+      id: string;
+      priority?: number;
+      lat?: number;
+      lng?: number;
+      bufferTime?: number;
+    }
+    
+    export interface RouteCalculationRequest {
+      departurePosition: LatLng;
+      routePoints: RoutePoint[];
+      deliveryStartTime: string;
+      optimize: boolean;
+    }
+
+    export interface PreferredRouteItem {
+      id: string;
+      userId: string;
+      priority: number;
+      groupBufferTime?: number;
+      origin: {
+        lat: number;
+        lng: number;
+      };
+    }
+    
+    
+    export type RoutePointWithEta = RoutePoint & { eta: string };
+    export type PreferredRouteItemWithDeliveryTime = PreferredRouteItem & {
+      deliveryTime: string;
+      groupBufferTime?: number;
+    };
+    
+    export interface HandleDeliveredStatusReq {
+      deliveryId: string;
+      driverId: string;
+      day: string;
+      time: string;
+      userId: string;
+      reasonForNotFollowPriority?: string;
+      deliveredAtLocation?: LatLng;
+    }
+    
+    export interface ProofOfDelivery {
+      images?: string[];
+      note?: string;
+    }
+    
+    export interface UpdateDeliveryReq {
+      deliveryStatus?: DDeliveryStatus;
+      reasonForNotFollowPriority?: string;
+      coolerBagNotReturned?: boolean;
+      coolerBagsReturned?: number;
+      deliveredAtLocation?: LatLng;
+      pod?: ProofOfDelivery;
+    }
+    
+    export interface DeliveryETAPriority {
+      day: string; //yyyy-mm-dd
+      priority: number;
+      groupBufferTime?: number;
+      deliveryTime?: DeliveryTime;
+      time?: string;
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      ETAs?: ETA[];
+    }
+    
+    export interface ETA {
+      time: string;
+      createdAt: string;
+    }
+    
+    export interface DeliveryEstimation extends DataRow {
+      id: DataType.deliveryEta;
+      sk: string; //subscriptionId
+      etas?: DeliveryETAPriority[];
+    }
+    
+    export interface LocationServiceGetRoutePathResponse {
+      waypoints: {
+        latitude: number;
+        longitude: number;
+      }[];
+      duration: number;
+    }
+    
+    export interface ESRoutePlan {
+      id: string; // unique id of route plan
+      day: string; // ISO 8601
+      time: DeliveryTime; // ISO 8601
+      country: Country;
+      kitchen: Kitchen;
+      routePlan: Record<string, DeliveryRoutePlan>; // key - delivery id
+      priority: string[]; // delivery id ordered by priority
+      lastDeliveredId?: string;
+      driverActions: ShiftActions[];
+      totalDeliveries: number;
+      deliveredDeliveries: number;
+      deliveredPositions: string[];
+      kitchenPosition: LatLng;
+      driver: {
+        id: string;
+        driverName: string;
+        phoneNumber: string;
+        email: string;
+      };
+      startingTime: string;
+      canStartShift?: boolean;
+      skippedScannings?: number;
+    }
+    
+    export interface DeliveryPlanFilters {
+      day: Range;
+      time?: DeliveryTime;
+      country?: Country;
+      kitchen?: Kitchen;
+      driverId?: string;
+    }
+    
+    export interface Delivery {
+      id: string;
+      userId: string;
+      paymentMethod: PaymentMethod;
+      deliveryAddress: DeliveryAddress;
+      name: string;
+      phoneNumber: string;
+      day: string;
+      time?: DeliveryTime;
+      status: DeliveryStatus;
+      pendingAmount: number;
+      deliveryStatus?: DDeliveryStatus;
+      priority?: number;
+      shortId: string;
+      currency: Currency;
+      brand: Brand;
+      groupBufferTime?: number;
+      eta?: Range;
+      deliveredAt?: string;
+      withCoolerBag?: boolean;
+      unreturnedCoolerBags?: number;
+      coolerBagsReturned?: number;
+    }
+    
+    export interface GetDeliveriesReq {
+      day: string;
+      withNewPriorities?: boolean;
+      time: DeliveryTime;
+    }
+    
+    export type GetCountryConfigRes = Omit<_GetCountryConfigRes, 'delivery'> & {
+      delivery?: {
+        timings: KitchenConfigDeliveryTime[];
+        clusterRadiusM?: number;
+      };
+    };
+    
+    interface KitchenConfigDeliveryTime {
+      id: DeliveryTime;
+      from: string;
+      to: string;
+      slots?: TimeSlotConfig[];
+    }
+
+    export interface TimeSlot {
+      from: string;
+      to: string;
+    }
+    
+    export interface TimeSlotConfig extends TimeSlot {
+      enabled: boolean;
+    }
+    

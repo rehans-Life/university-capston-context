@@ -3,8 +3,8 @@ import { InternalServerError } from 'http-errors';
 import { apiV2Middleware, withSecrets } from '@calo/core';
 
 import GenerateRouteUseCase from './useCase';
-import { RouteCalculationRequest } from '../../../libs/interfaces';
-import RouteService from '../../../libs/services/RouteService';
+import { RouteCalculationRequest } from '../../libs/interfaces';
+import RouteService from '../../libs/services/RouteService';
 
 export const handler = apiV2Middleware<RouteCalculationRequest>()
   .use(

@@ -1,6 +1,6 @@
 import { logger } from '@calo/core';
-import { FileService, RouteService } from '../../../libs/services';
-import { GenerateTimeWindowRouteParams, RoutingOutput } from '../../../libs/interfaces';
+import { FileService, RouteService } from '../../libs/services';
+import { GenerateTimeWindowRouteParams, RoutingOutput } from '../../libs/interfaces';
 class GenerateRouteUseCase {
   constructor(
     private routeService: RouteService,
